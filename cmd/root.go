@@ -31,6 +31,13 @@ var (
 	}
 )
 
+func weekToChineseChar(key time.Weekday) string {
+	var wtc = []string{
+		"日", "月", "火", "水", "木", "金", "土",
+	}
+	return wtc[key]
+}
+
 func Execute() error {
 	return rootCmd.Execute()
 }
@@ -52,6 +59,7 @@ func initConfig() {
 }
 
 func printDatenize(d time.Time) {
-	fmt.Printf("%s %d %d %02d:%02d:%02d UTC %d\n",
-		d.Weekday(), d.Month(), d.Day(), d.Hour(), d.Minute(), d.Second(), d.Year())
+	fmt.Printf("%s %2d %2d %02d:%02d:%02d UTC %d\n",
+		weekToChineseChar(d.Weekday()), d.Month(), d.Day(),
+		d.Hour(), d.Minute(), d.Second(), d.Year())
 }
