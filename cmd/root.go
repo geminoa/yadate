@@ -16,16 +16,15 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			if bUtc, err := cmd.Flags().GetBool("utc"); err == nil {
 				if bUtc {
-					tz := "America/New_York"
-					a, err := time.LoadLocation(tz)
+					a, err := time.LoadLocation("UTC")
 					if err != nil {
 						panic(err)
 					}
 					now := time.Now().In(a)
-					fmt.Println(now)
+					printDatenize(now)
 				} else {
 					now := time.Now()
-					fmt.Println(now)
+					printDatenize(now)
 				}
 			}
 		},
@@ -50,4 +49,9 @@ func init() {
 func initConfig() {
 	// init config with viper
 	// https://github.com/spf13/cobra/blob/master/user_guide.md
+}
+
+func printDatenize(d time.Time) {
+	fmt.Printf("%s %d %d %02d:%02d:%02d UTC %d\n",
+		d.Weekday(), d.Month(), d.Day(), d.Hour(), d.Minute(), d.Second(), d.Year())
 }
