@@ -33,12 +33,21 @@ var (
 )
 
 func Execute() error {
+	return rootCmd.Execute()
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
 	rootCmd.Flags().BoolP(
 		"utc", "u", false,
 		"print or set Coordinated Universal Time (UTC)")
 	rootCmd.Flags().StringP(
 		"date", "d", "",
 		"display time described by STRING, not 'now'")
+}
 
-	return rootCmd.Execute()
+func initConfig() {
+	// init config with viper
+	// https://github.com/spf13/cobra/blob/master/user_guide.md
 }
