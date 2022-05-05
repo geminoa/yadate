@@ -18,8 +18,12 @@ var (
 
 			resTime = time.Now()
 
-			if bUtc, err := cmd.Flags().GetBool("utc"); err == nil {
-				if bUtc {
+			if dateOpt, err := cmd.Flags().GetString("date"); err == nil {
+				resTime = modDate(resTime, dateOpt)
+			}
+
+			if utcOpt, err := cmd.Flags().GetBool("utc"); err == nil {
+				if utcOpt {
 					a, err := time.LoadLocation("UTC")
 					if err != nil {
 						panic(err)
@@ -64,4 +68,28 @@ func printDatenize(d time.Time) {
 	fmt.Printf("%s %2d %2d %02d:%02d:%02d UTC %d\n",
 		weekToChineseChar(d.Weekday()), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), d.Year())
+}
+
+func modDate(t time.Time, dOpt string) time.Time {
+	var (
+		year  int           = 0
+		month int           = 0
+		day   int           = 0
+		hour  time.Duration = 0
+		min   time.Duration = 0
+		sec   time.Duration = 0
+	)
+
+	// TODO use regexp to support more flexible format
+	if dOpt == "yesterday" {
+		day -= 1
+	} else if dOpt == "tomorrow" {
+		day += 1
+	} else if dOpt == "1 year ago" {
+		year -= 1
+	}
+
+	t = t.AddDate(year, month, day)
+	t = t.Add(time.Hour*hour + time.Minute*min + time.Second*sec)
+	return t
 }
