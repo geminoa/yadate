@@ -14,19 +14,21 @@ var (
 		Long: `Yet another date command for providing more flexible ways for ` +
 			`standard date command.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			var resTime time.Time
+
+			resTime = time.Now()
+
 			if bUtc, err := cmd.Flags().GetBool("utc"); err == nil {
 				if bUtc {
 					a, err := time.LoadLocation("UTC")
 					if err != nil {
 						panic(err)
 					}
-					now := time.Now().In(a)
-					printDatenize(now)
-				} else {
-					now := time.Now()
-					printDatenize(now)
+					resTime = resTime.In(a)
 				}
 			}
+
+			printDatenize(resTime)
 		},
 	}
 )
