@@ -2,10 +2,18 @@ package cmd
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 )
+
+type DateTime struct {
+	Year, Month, Day int
+	Hour, Min, Sec   time.Duration
+}
 
 var (
 	rootCmd = &cobra.Command{
@@ -64,32 +72,66 @@ func initConfig() {
 	// https://github.com/spf13/cobra/blob/master/user_guide.md
 }
 
-func printDatenize(d time.Time) {
-	fmt.Printf("%s %2d %2d %02d:%02d:%02d UTC %d\n",
-		weekToChineseChar(d.Weekday()), d.Month(), d.Day(),
-		d.Hour(), d.Minute(), d.Second(), d.Year())
-}
-
 func modDate(t time.Time, dOpt string) time.Time {
 	var (
-		year  int           = 0
-		month int           = 0
-		day   int           = 0
-		hour  time.Duration = 0
-		min   time.Duration = 0
-		sec   time.Duration = 0
+		dt = DateTime{0, 0, 0, 0, 0, 0}
 	)
 
+	reSpaces := regexp.MustCompile(`\s+`)
+	dOpt = reSpaces.ReplaceAllString(dOpt, " ")
+	dOptTerms := strings.Split(dOpt, " ")
+
 	// TODO use regexp to support more flexible format
-	if dOpt == "yesterday" {
-		day -= 1
-	} else if dOpt == "tomorrow" {
-		day += 1
-	} else if dOpt == "1 year ago" {
-		year -= 1
+	if len(dOptTerms) == 1 {
+		n, term := parseSingleDateOpt(dOpt)
+		switch term {
+		case "yesterday":
+			dt.Day -= n * 1
+		case "tomorrow":
+			dt.Day += n * 1
+		case "week":
+			dt.Day += n * 7
+		case "fortnight":
+			dt.Day += n * 14
+		case "day":
+			dt.Month += n * 1
+		case "month":
+			dt.Month += n * 1
+		case "year":
+			dt.Year += n * 1
+		default:
+		}
+	} else {
+		// TODO
+		r := regexp.MustCompile(`(\d+)\s+(\w+)\s*(\w*)`)
+		if r.MatchString(dOpt) {
+			fmt.Println(dOpt)
+			a := r.FindAllSubmatch([]byte(dOpt), -1)
+			fmt.Println(a[0])
+			dt.Year -= 1
+		}
 	}
 
-	t = t.AddDate(year, month, day)
-	t = t.Add(time.Hour*hour + time.Minute*min + time.Second*sec)
+	t = t.AddDate(dt.Year, dt.Month, dt.Day)
+	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Sec)
 	return t
+}
+
+func parseSingleDateOpt(dOpt string) (n int, term string) {
+	n = 1
+	term = ""
+
+	r1 := regexp.MustCompile(`^(\d+)(\w+)`)
+	r2 := regexp.MustCompile(`^(\w+)`)
+
+	if r1.MatchString(dOpt) {
+		a := r1.FindAllSubmatch([]byte(dOpt), -1)
+		n, _ = strconv.Atoi(string(a[0][1]))
+		term = string(a[0][2])
+	} else if r2.MatchString(dOpt) {
+		a := r2.FindAllSubmatch([]byte(dOpt), -1)
+		term = string(a[0][1])
+	}
+
+	return n, term
 }
