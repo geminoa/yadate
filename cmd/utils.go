@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+func weekToChineseChar(key time.Weekday) string {
+	var wtc = []string{
+		"日", "月", "火", "水", "木", "金", "土",
+	}
+	return wtc[key]
+}
+
 func printDatenize(d time.Time) {
 	tzName, _ := d.Zone()
 	fmt.Printf("%s %2d %2d %02d:%02d:%02d %s %d\n",
