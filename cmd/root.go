@@ -11,8 +11,8 @@ import (
 )
 
 type DateTime struct {
-	Year, Month, Day int
-	Hour, Min, Sec   time.Duration
+	Year, Month, Day  int
+	Hour, Min, Second time.Duration
 }
 
 var (
@@ -79,20 +79,21 @@ func modDate(t time.Time, dOpt string) time.Time {
 		n, term := parseSingleDateOpt(dOpt)
 		switch term {
 		case "yesterday":
-			dt.Day -= n * 1
+			dt.Day -= 1
 		case "tomorrow":
-			dt.Day += n * 1
-		case "week":
+			dt.Day += 1
+		case "week", "weeks":
 			dt.Day += n * 7
-		case "fortnight":
+		case "fortnight", "fortnights":
 			dt.Day += n * 14
-		case "day":
+		case "day", "days":
 			dt.Month += n * 1
-		case "month":
+		case "month", "months":
 			dt.Month += n * 1
-		case "year":
+		case "year", "years":
 			dt.Year += n * 1
 		default:
+			// do nothing
 		}
 	} else {
 		// TODO
@@ -106,7 +107,7 @@ func modDate(t time.Time, dOpt string) time.Time {
 	}
 
 	t = t.AddDate(dt.Year, dt.Month, dt.Day)
-	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Sec)
+	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
 	return t
 }
 
@@ -114,16 +115,18 @@ func parseSingleDateOpt(dOpt string) (n int, term string) {
 	n = 1
 	term = ""
 
-	r1 := regexp.MustCompile(`^(\d+)(\w+)`)
-	r2 := regexp.MustCompile(`^(\w+)`)
+	r := regexp.MustCompile(`^(-?)(\d*)(\w*)`)
 
-	if r1.MatchString(dOpt) {
-		a := r1.FindAllSubmatch([]byte(dOpt), -1)
-		n, _ = strconv.Atoi(string(a[0][1]))
-		term = string(a[0][2])
-	} else if r2.MatchString(dOpt) {
-		a := r2.FindAllSubmatch([]byte(dOpt), -1)
-		term = string(a[0][1])
+	if r.MatchString(dOpt) {
+		a := r.FindAllSubmatch([]byte(dOpt), -1)
+		n, _ = strconv.Atoi(string(a[0][2]))
+		if n == 0 { // n is 0 if no num in dOpt, but should be 1 in this case.
+			n = 1
+		}
+		if len(a[0][1]) != 0 { // including '-' for negative number
+			n = -n
+		}
+		term = string(a[0][3])
 	}
 
 	return n, term
