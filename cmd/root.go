@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -70,6 +71,7 @@ func modDate(t time.Time, dOpt string) time.Time {
 		dt = DateTime{0, 0, 0, 0, 0, 0}
 	)
 
+	// Remove all redundant spaces.
 	reSpaces := regexp.MustCompile(`\s+`)
 	dOpt = reSpaces.ReplaceAllString(dOpt, " ")
 	dOptTerms := strings.Split(dOpt, " ")
@@ -77,32 +79,55 @@ func modDate(t time.Time, dOpt string) time.Time {
 	// TODO use regexp to support more flexible format
 	if len(dOptTerms) == 1 {
 		n, term := parseSingleDateOpt(dOpt)
-		switch term {
-		case "yesterday":
-			dt.Day -= 1
-		case "tomorrow":
-			dt.Day += 1
-		case "week", "weeks":
-			dt.Day += n * 7
-		case "fortnight", "fortnights":
-			dt.Day += n * 14
-		case "day", "days":
-			dt.Month += n * 1
-		case "month", "months":
-			dt.Month += n * 1
-		case "year", "years":
-			dt.Year += n * 1
-		default:
-			// do nothing
-		}
+		dt = updateDateTime(dt, n, term)
 	} else {
-		// TODO
-		r := regexp.MustCompile(`(\d+)\s+(\w+)\s*(\w*)`)
-		if r.MatchString(dOpt) {
-			fmt.Println(dOpt)
-			a := r.FindAllSubmatch([]byte(dOpt), -1)
-			fmt.Println(a[0])
-			dt.Year -= 1
+		agoPos := []int{} // Positions of "ago" in dOptTerms
+		for i, t := range dOptTerms {
+			if t == "ago" {
+				agoPos = append(agoPos, i)
+			}
+		}
+		// Change numbers to negative if it's mentions as "ago".
+		for _, v := range agoPos {
+			if v-1 < 0 {
+				// TODO: raise a panic because it cannot be happend.
+			} else if v-2 < 0 { // case of first value with no number such as "-d year ago"
+				n, t := parseSingleDateOpt(dOptTerms[v-1])
+				dOptTerms[v-1] = fmt.Sprintf("%d%s", -n, t)
+			} else {
+				if n, err := strconv.Atoi(dOptTerms[v-2]); err == nil {
+					dOptTerms[v-2] = fmt.Sprintf("%d", -n)
+				} else {
+					n, t := parseSingleDateOpt(dOptTerms[v-1])
+					dOptTerms[v-1] = fmt.Sprintf("%d%s", -n, t)
+				}
+			}
+		}
+		sort.Sort(sort.Reverse(sort.IntSlice(agoPos)))
+		for _, v := range agoPos {
+			dOptTerms = append(dOptTerms[:v], dOptTerms[v+1:]...)
+		}
+
+		rNum := regexp.MustCompile(`^-?(\d+)`)
+		rStr := regexp.MustCompile(`^(\w+)`)
+		for i := 0; i < len(dOptTerms)-1; i++ {
+			// TODO: combine num and term if there are separated
+			if rNum.MatchString(dOptTerms[i]) && rStr.MatchString(dOptTerms[i+1]) {
+				dOptTerms[i] = dOptTerms[i] + dOptTerms[i+1]
+				dOptTerms[i+1] = ""
+			}
+
+		}
+		dTerms := []string{}
+		for _, v := range dOptTerms {
+			if v != "" {
+				dTerms = append(dTerms, v)
+			}
+		}
+
+		for _, v := range dTerms {
+			n, term := parseSingleDateOpt(v)
+			dt = updateDateTime(dt, n, term)
 		}
 	}
 
@@ -130,4 +155,33 @@ func parseSingleDateOpt(dOpt string) (n int, term string) {
 	}
 
 	return n, term
+}
+
+func updateDateTime(dt DateTime, n int, term string) DateTime {
+	switch term {
+	case "yesterday":
+		dt.Day -= 1
+	case "tomorrow":
+		dt.Day += 1
+	case "week", "weeks":
+		dt.Day += n * 7
+	case "fortnight", "fortnights":
+		dt.Day += n * 14
+	case "year", "years":
+		dt.Year += n * 1
+	case "month", "months":
+		dt.Month += n * 1
+	case "day", "days":
+		dt.Month += n * 1
+	case "hour", "hours":
+		dt.Hour += time.Duration(n * 1)
+	case "minute", "minutes":
+		dt.Min += time.Duration(n * 1)
+	case "second", "seconds":
+		dt.Second += time.Duration(n * 1)
+	default:
+		// TODO
+		fmt.Println("Implement parser for value in ints such as '20220310' later")
+	}
+	return dt
 }
