@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -26,6 +28,15 @@ func included(s string, ary []string) bool {
 		}
 	}
 	return false
+}
+
+func splitWithSpace(s string) []string {
+	// Remove all redundant spaces.
+	reSpaces := regexp.MustCompile(`\s+`)
+	s = reSpaces.ReplaceAllString(s, " ")
+	terms := strings.Split(s, " ")
+
+	return terms
 }
 
 func findLayout(s string) string {
