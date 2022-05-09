@@ -70,8 +70,51 @@ func modDate(t time.Time, dOpt string) time.Time {
 		dt = DateTime{0, 0, 0, 0, 0, 0}
 	)
 
+	//rDigits := regexp.MustCompile(`^(\d{1,14})`)
+	rYMD := `^(\d+)[/-](\d{1,2})[/-](\d{1,2})`
+	rMD := `^(\d{1,2})[/-](\d{1,2})`
+	rHMS := `(\d+):(\d{1,2}):(\d{1,2})`
+
+	rDateTime := regexp.MustCompile(rYMD + `\s+` + rHMS)
+	rDateTimeWOY := regexp.MustCompile(rMD + `\s+` + rHMS)
+
+	rDate := regexp.MustCompile(rYMD)
+	rDateWOY := regexp.MustCompile(rMD)
+
 	if layout := findLayout(dOpt); layout != "" {
 		t, _ = time.Parse(layout, dOpt)
+	} else if rDateTime.MatchString(dOpt) {
+		res := rDateTime.FindAllStringSubmatch(dOpt, -1)
+		a := []int{}
+		for i := 1; i < len(res[0]); i++ {
+			v, _ := strconv.Atoi(res[0][i])
+			a = append(a, v)
+		}
+		t = time.Date(a[0], time.Month(a[1]), a[2], a[3], a[4], a[5], 0, t.Location())
+	} else if rDateTimeWOY.MatchString(dOpt) {
+		res := rDateTimeWOY.FindAllStringSubmatch(dOpt, -1)
+		a := []int{}
+		for i := 1; i < len(res[0]); i++ {
+			v, _ := strconv.Atoi(res[0][i])
+			a = append(a, v)
+		}
+		t = time.Date(t.Year(), time.Month(a[0]), a[1], a[2], a[3], a[4], 0, t.Location())
+	} else if rDate.MatchString(dOpt) {
+		res := rDate.FindAllStringSubmatch(dOpt, -1)
+		a := []int{}
+		for i := 1; i < len(res[0]); i++ {
+			v, _ := strconv.Atoi(res[0][i])
+			a = append(a, v)
+		}
+		t = time.Date(a[0], time.Month(a[1]), a[2], 0, 0, 0, 0, t.Location())
+	} else if rDateWOY.MatchString(dOpt) {
+		res := rDateWOY.FindAllStringSubmatch(dOpt, -1)
+		a := []int{}
+		for i := 1; i < len(res[0]); i++ {
+			v, _ := strconv.Atoi(res[0][i])
+			a = append(a, v)
+		}
+		t = time.Date(t.Year(), time.Month(a[0]), a[1], 0, 0, 0, 0, t.Location())
 	}
 
 	dOptTerms := splitWithSpace(dOpt)
@@ -103,9 +146,6 @@ func modDate(t time.Time, dOpt string) time.Time {
 	for _, v := range agoPos {
 		dOptTerms = append(dOptTerms[:v], dOptTerms[v+1:]...)
 	}
-
-	//rDigits := regexp.MustCompile(`^(\d{1,14})$`)
-	//rDate := regexp.MustCompile(`^(\d{1,4})/(\d{1,2})/(\d{1,2})`)
 
 	rNum := regexp.MustCompile(`^-?(\d+)`)
 	rStr := regexp.MustCompile(`^(\w+)`)
