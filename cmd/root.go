@@ -76,10 +76,8 @@ func modDate(t time.Time, dOpt string) time.Time {
 	dOpt = reSpaces.ReplaceAllString(dOpt, " ")
 	dOptTerms := strings.Split(dOpt, " ")
 
-	// TODO use regexp to support more flexible format
-	if len(dOptTerms) == 1 {
-		n, term := parseSingleDateOpt(dOpt)
-		dt = updateDateTime(dt, n, term)
+	if layout := findLayout(dOpt); layout != "" {
+		t, _ = time.Parse(layout, dOpt)
 	} else {
 		agoPos := []int{} // Positions of "ago" in dOptTerms
 		for i, t := range dOptTerms {
@@ -103,10 +101,15 @@ func modDate(t time.Time, dOpt string) time.Time {
 				}
 			}
 		}
+
+		// Remove entries "ago" from dOptTerms.
 		sort.Sort(sort.Reverse(sort.IntSlice(agoPos)))
 		for _, v := range agoPos {
 			dOptTerms = append(dOptTerms[:v], dOptTerms[v+1:]...)
 		}
+
+		//rDigits := regexp.MustCompile(`^(\d{1,14})$`)
+		//rDate := regexp.MustCompile(`^(\d{1,4})/(\d{1,2})/(\d{1,2})`)
 
 		rNum := regexp.MustCompile(`^-?(\d+)`)
 		rStr := regexp.MustCompile(`^(\w+)`)
@@ -129,10 +132,10 @@ func modDate(t time.Time, dOpt string) time.Time {
 			n, term := parseSingleDateOpt(v)
 			dt = updateDateTime(dt, n, term)
 		}
+		t = t.AddDate(dt.Year, dt.Month, dt.Day)
+		t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
 	}
 
-	t = t.AddDate(dt.Year, dt.Month, dt.Day)
-	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
 	return t
 }
 
@@ -181,7 +184,6 @@ func updateDateTime(dt DateTime, n int, term string) DateTime {
 		dt.Second += time.Duration(n * 1)
 	default:
 		// TODO
-		fmt.Println("Implement parser for value in ints such as '20220310' later")
 	}
 	return dt
 }

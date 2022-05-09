@@ -12,7 +12,9 @@
             "mode": "auto",
             "program": "${cwd}",
             //"env": {"TZ": "GB"},
-            "args": ["-d", "month"]
+            //"args": ["-d", "-1month"]
+            "args": ["-d", "01/02 03:04:05PM '06 +0900 2 month"]
+            //"args": ["-d", "1234/05/6 1 month"]
         }
     ]
 }

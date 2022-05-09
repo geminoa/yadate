@@ -27,3 +27,50 @@ func included(s string, ary []string) bool {
 	}
 	return false
 }
+
+func findLayout(s string) string {
+	var (
+		res string
+	)
+
+	//dt = DateTime{a.Year(), int(a.Month()), a.Day(),
+	//	time.Duration(a.Hour()), time.Duration(a.Minute()), time.Duration(a.Second())}
+
+	if _, err := time.Parse(time.Layout, s); err == nil {
+		res = time.Layout
+	} else if _, err := time.Parse(time.ANSIC, s); err == nil {
+		res = time.ANSIC
+	} else if _, err := time.Parse(time.UnixDate, s); err == nil {
+		res = time.UnixDate
+	} else if _, err := time.Parse(time.RubyDate, s); err == nil {
+		res = time.RubyDate
+	} else if _, err := time.Parse(time.RFC822, s); err == nil {
+		res = time.RFC822
+	} else if _, err := time.Parse(time.RFC822Z, s); err == nil {
+		res = time.RFC822Z
+	} else if _, err := time.Parse(time.RFC850, s); err == nil {
+		res = time.RFC850
+	} else if _, err := time.Parse(time.RFC1123, s); err == nil {
+		res = time.RFC1123
+	} else if _, err := time.Parse(time.RFC1123Z, s); err == nil {
+		res = time.RFC1123Z
+	} else if _, err := time.Parse(time.RFC3339, s); err == nil {
+		res = time.RFC3339
+	} else if _, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		res = time.RFC3339Nano
+	} else if _, err := time.Parse(time.Kitchen, s); err == nil {
+		res = time.Kitchen
+	} else if _, err := time.Parse(time.Stamp, s); err == nil {
+		res = time.Stamp
+	} else if _, err := time.Parse(time.StampMilli, s); err == nil {
+		res = time.StampMilli
+	} else if _, err := time.Parse(time.StampMicro, s); err == nil {
+		res = time.StampMicro
+	} else if _, err := time.Parse(time.StampNano, s); err == nil {
+		res = time.StampNano
+	} else {
+		return ""
+	}
+
+	return res
+}
