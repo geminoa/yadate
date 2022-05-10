@@ -113,11 +113,7 @@ func initConfig() {
 	// https://github.com/spf13/cobra/blob/master/user_guide.md
 }
 
-func modDate(t time.Time, dOpt string) (time.Time, error) {
-	var (
-		dt = DateTime{0, 0, 0, 0, 0, 0}
-	)
-
+func updateDate(t time.Time, dOpt string) (time.Time, error) {
 	//rDigits := regexp.MustCompile(`^(\d{1,14})`)
 	rYMD := `^(\d+)[/-](\d{1,2})[/-](\d{1,2})` // 2022/05/10 (year/month/day)
 	rMD := `^(\d{1,2})[/-](\d{1,2})`           // 05/10 (month/day)
@@ -125,7 +121,6 @@ func modDate(t time.Time, dOpt string) (time.Time, error) {
 	rHMSN := `(\d{1,2}):(\d{1,2}):(\d{1,2}).(\d)` // 11:22:33.1234 (hour:min:sec.nsec)
 	rHMS := `(\d{1,2}):(\d{1,2}):(\d{1,2})`       // 11:22:33 (hour:min:sec)
 	rHM := `(\d{1,2}):(\d{1,2})`                  // 11:22 (hour:min)
-	//rH := `(\d{1,2})`                             // 11 (hour)
 
 	rcYMDHMSN := regexp.MustCompile(rYMD + `\s+` + rHMSN) // 2022/05/10 11:22:33.1234
 	rcYMDHMS := regexp.MustCompile(rYMD + `\s+` + rHMS)   // 2022/05/10 11:22:33
@@ -176,7 +171,11 @@ func modDate(t time.Time, dOpt string) (time.Time, error) {
 			idt = InitDateTime{t.Year(), a[0], a[1], a[2], a[3], 0, 0}
 		} else if res := rcMDH.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{t.Year(), a[0], a[1], a[2], 0, 0, 0}
+			if a[2]/100 == 0 {
+				idt = InitDateTime{t.Year(), a[0], a[1], a[2], 0, 0, 0}
+			} else {
+				idt = InitDateTime{a[2], a[0], a[1], 0, 0, 0, 0}
+			}
 
 		} else if res := rcYMD.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
@@ -192,6 +191,10 @@ func modDate(t time.Time, dOpt string) (time.Time, error) {
 		}
 	}
 
+	return t, nil
+}
+
+func updateDateTime(dOpt string) DateTime {
 	dOptTerms := splitWithSpace(dOpt)
 	agoPos := []int{} // Positions of "ago" in dOptTerms
 	for i, t := range dOptTerms {
@@ -239,10 +242,23 @@ func modDate(t time.Time, dOpt string) (time.Time, error) {
 		}
 	}
 
+	dt := DateTime{0, 0, 0, 0, 0, 0}
 	for _, v := range dTerms {
 		n, term := parseSingleDateOpt(v)
 		dt.update(n, term)
 	}
+	return dt
+}
+
+func modDate(t time.Time, dOpt string) (time.Time, error) {
+
+	t, err := updateDate(t, dOpt)
+	if err != nil {
+		return t, err
+	}
+
+	dt := updateDateTime(dOpt)
+
 	t = t.AddDate(dt.Year, dt.Month, dt.Day)
 	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
 
