@@ -44,9 +44,6 @@ func findLayout(s string) string {
 		res string
 	)
 
-	//dt = DateTime{a.Year(), int(a.Month()), a.Day(),
-	//	time.Duration(a.Hour()), time.Duration(a.Minute()), time.Duration(a.Second())}
-
 	if _, err := time.Parse(time.Layout, s); err == nil {
 		res = time.Layout
 	} else if _, err := time.Parse(time.ANSIC, s); err == nil {

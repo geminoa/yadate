@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -13,6 +14,20 @@ import (
 type DateTime struct {
 	Year, Month, Day  int
 	Hour, Min, Second time.Duration
+}
+
+type InitDateTime struct {
+	y, m, d, h, min, sec, nsec int
+}
+
+func (self InitDateTime) equals(idt InitDateTime) bool {
+	if (self.y == idt.y) && (self.m == idt.m) && (self.d == idt.d) &&
+		(self.h == idt.h) && (self.min == idt.min) && (self.sec == idt.sec) &&
+		(self.nsec == idt.nsec) {
+		return true
+	} else {
+		return false
+	}
 }
 
 var (
@@ -27,7 +42,13 @@ var (
 			resTime = time.Now()
 
 			if dateOpt, err := cmd.Flags().GetString("date"); err == nil {
-				resTime = modDate(resTime, dateOpt)
+				if dateOpt != "" {
+					resTime, err = modDate(resTime, dateOpt)
+					if err != nil {
+						fmt.Println(err)
+						os.Exit(1)
+					}
+				}
 			}
 
 			if utcOpt, err := cmd.Flags().GetBool("utc"); err == nil {
@@ -65,56 +86,83 @@ func initConfig() {
 	// https://github.com/spf13/cobra/blob/master/user_guide.md
 }
 
-func modDate(t time.Time, dOpt string) time.Time {
+func modDate(t time.Time, dOpt string) (time.Time, error) {
 	var (
 		dt = DateTime{0, 0, 0, 0, 0, 0}
 	)
 
 	//rDigits := regexp.MustCompile(`^(\d{1,14})`)
-	rYMD := `^(\d+)[/-](\d{1,2})[/-](\d{1,2})`
-	rMD := `^(\d{1,2})[/-](\d{1,2})`
-	rHMS := `(\d+):(\d{1,2}):(\d{1,2})`
+	rYMD := `^(\d+)[/-](\d{1,2})[/-](\d{1,2})` // 2022/05/10 (year/month/day)
+	rMD := `^(\d{1,2})[/-](\d{1,2})`           // 05/10 (month/day)
 
-	rDateTime := regexp.MustCompile(rYMD + `\s+` + rHMS)
-	rDateTimeWOY := regexp.MustCompile(rMD + `\s+` + rHMS)
+	rHMSN := `(\d{1,2}):(\d{1,2}):(\d{1,2}).(\d)` // 11:22:33.1234 (hour:min:sec.nsec)
+	rHMS := `(\d{1,2}):(\d{1,2}):(\d{1,2})`       // 11:22:33 (hour:min:sec)
+	rHM := `(\d{1,2}):(\d{1,2})`                  // 11:22 (hour:min)
+	//rH := `(\d{1,2})`                             // 11 (hour)
 
-	rDate := regexp.MustCompile(rYMD)
-	rDateWOY := regexp.MustCompile(rMD)
+	rcYMDHMSN := regexp.MustCompile(rYMD + `\s+` + rHMSN) // 2022/05/10 11:22:33.1234
+	rcYMDHMS := regexp.MustCompile(rYMD + `\s+` + rHMS)   // 2022/05/10 11:22:33
+	rcYMDHM := regexp.MustCompile(rYMD + `\s+` + rHM)     // 2022/05/10 11:22
+	rcYMDH := regexp.MustCompile(rYMD + `\s+` + `(\d+)`)  // 2022/05/10 11
 
-	if layout := findLayout(dOpt); layout != "" {
+	rcMDHMSN := regexp.MustCompile(rMD + `\s+` + rHMSN) // 05/10 11:22:33.1234
+	rcMDHMS := regexp.MustCompile(rMD + `\s+` + rHMS)   // 05/10 11:22:33
+	rcMDHM := regexp.MustCompile(rMD + `\s+` + rHM)     // 05/10 11:22
+	rcMDH := regexp.MustCompile(rMD + `\s+` + `(\d+)`)  // 05/10 11
+
+	rcYMD := regexp.MustCompile(rYMD) // 2022/05/10
+	rcMD := regexp.MustCompile(rMD)   // 05/10
+
+	if layout := findLayout(dOpt); layout != "" { // Time format in golang.
 		t, _ = time.Parse(layout, dOpt)
-	} else if rDateTime.MatchString(dOpt) {
-		res := rDateTime.FindAllStringSubmatch(dOpt, -1)
-		a := []int{}
-		for i := 1; i < len(res[0]); i++ {
-			v, _ := strconv.Atoi(res[0][i])
-			a = append(a, v)
+	} else { // formats in `date` command.
+		idt := InitDateTime{0, 0, 0, 0, 0, 0, 0}
+		if res := rcYMDHMSN.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{a[0], a[1], a[2], a[3], a[4], a[5], a[6]}
+		} else if res := rcYMDHMS.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{a[0], a[1], a[2], a[3], a[4], a[5], 0}
+		} else if res := rcYMDHM.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{a[0], a[1], a[2], a[3], a[4], 0, 0}
+		} else if res := rcYMDH.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			if a[3]/10000 != 0 {
+				return t, fmt.Errorf("date: invalid date '%s'", dOpt)
+			} else if a[3]/100 != 0 {
+				hour := a[3] / 100
+				min := a[3] % 100
+				idt = InitDateTime{a[0], a[1], a[2], hour, min, 0, 0}
+			} else {
+				idt = InitDateTime{a[0], a[1], a[2], a[3], 0, 0, 0}
+			}
+
+		} else if res := rcMDHMSN.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{t.Year(), a[0], a[1], a[2], a[3], a[4], a[5]}
+		} else if res := rcMDHMS.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{t.Year(), a[0], a[1], a[2], a[3], a[4], 0}
+		} else if res := rcMDHM.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{t.Year(), a[0], a[1], a[2], a[3], 0, 0}
+		} else if res := rcMDH.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{t.Year(), a[0], a[1], a[2], 0, 0, 0}
+
+		} else if res := rcYMD.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{a[0], a[1], a[2], 0, 0, 0, 0}
+		} else if res := rcMD.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
+			a := getInitDateArray(res[0])
+			idt = InitDateTime{t.Year(), a[0], a[1], 0, 0, 0, 0}
 		}
-		t = time.Date(a[0], time.Month(a[1]), a[2], a[3], a[4], a[5], 0, t.Location())
-	} else if rDateTimeWOY.MatchString(dOpt) {
-		res := rDateTimeWOY.FindAllStringSubmatch(dOpt, -1)
-		a := []int{}
-		for i := 1; i < len(res[0]); i++ {
-			v, _ := strconv.Atoi(res[0][i])
-			a = append(a, v)
+
+		if !idt.equals(InitDateTime{0, 0, 0, 0, 0, 0, 0}) {
+			t = time.Date(idt.y, time.Month(idt.m), idt.d, idt.h, idt.min, idt.sec,
+				idt.nsec, t.Location())
 		}
-		t = time.Date(t.Year(), time.Month(a[0]), a[1], a[2], a[3], a[4], 0, t.Location())
-	} else if rDate.MatchString(dOpt) {
-		res := rDate.FindAllStringSubmatch(dOpt, -1)
-		a := []int{}
-		for i := 1; i < len(res[0]); i++ {
-			v, _ := strconv.Atoi(res[0][i])
-			a = append(a, v)
-		}
-		t = time.Date(a[0], time.Month(a[1]), a[2], 0, 0, 0, 0, t.Location())
-	} else if rDateWOY.MatchString(dOpt) {
-		res := rDateWOY.FindAllStringSubmatch(dOpt, -1)
-		a := []int{}
-		for i := 1; i < len(res[0]); i++ {
-			v, _ := strconv.Atoi(res[0][i])
-			a = append(a, v)
-		}
-		t = time.Date(t.Year(), time.Month(a[0]), a[1], 0, 0, 0, 0, t.Location())
 	}
 
 	dOptTerms := splitWithSpace(dOpt)
@@ -171,7 +219,7 @@ func modDate(t time.Time, dOpt string) time.Time {
 	t = t.AddDate(dt.Year, dt.Month, dt.Day)
 	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
 
-	return t
+	return t, nil
 }
 
 func parseSingleDateOpt(dOpt string) (n int, term string) {
@@ -221,4 +269,13 @@ func updateDateTime(dt DateTime, n int, term string) DateTime {
 		// TODO
 	}
 	return dt
+}
+
+func getInitDateArray(ary []string) []int {
+	a := []int{}
+	for i := 1; i < len(ary); i++ {
+		v, _ := strconv.Atoi(ary[i])
+		a = append(a, v)
+	}
+	return a
 }
