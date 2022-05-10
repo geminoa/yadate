@@ -16,14 +16,41 @@ type DateTime struct {
 	Hour, Min, Second time.Duration
 }
 
+func (dt *DateTime) update(n int, term string) {
+	switch term {
+	case "yesterday":
+		dt.Day -= 1
+	case "tomorrow":
+		dt.Day += 1
+	case "week", "weeks":
+		dt.Day += n * 7
+	case "fortnight", "fortnights":
+		dt.Day += n * 14
+	case "year", "years":
+		dt.Year += n * 1
+	case "month", "months":
+		dt.Month += n * 1
+	case "day", "days":
+		dt.Day += n * 1
+	case "hour", "hours":
+		dt.Hour += time.Duration(n * 1)
+	case "minute", "minutes":
+		dt.Min += time.Duration(n * 1)
+	case "second", "seconds":
+		dt.Second += time.Duration(n * 1)
+	default:
+		// do nothing
+	}
+}
+
 type InitDateTime struct {
 	y, m, d, h, min, sec, nsec int
 }
 
-func (self InitDateTime) equals(idt InitDateTime) bool {
-	if (self.y == idt.y) && (self.m == idt.m) && (self.d == idt.d) &&
-		(self.h == idt.h) && (self.min == idt.min) && (self.sec == idt.sec) &&
-		(self.nsec == idt.nsec) {
+func (idt InitDateTime) equals(another InitDateTime) bool {
+	if (idt.y == another.y) && (idt.m == another.m) && (idt.d == another.d) &&
+		(idt.h == another.h) && (idt.min == another.min) &&
+		(idt.sec == another.sec) && (idt.nsec == another.nsec) {
 		return true
 	} else {
 		return false
@@ -214,7 +241,7 @@ func modDate(t time.Time, dOpt string) (time.Time, error) {
 
 	for _, v := range dTerms {
 		n, term := parseSingleDateOpt(v)
-		dt = updateDateTime(dt, n, term)
+		dt.update(n, term)
 	}
 	t = t.AddDate(dt.Year, dt.Month, dt.Day)
 	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
@@ -241,34 +268,6 @@ func parseSingleDateOpt(dOpt string) (n int, term string) {
 	}
 
 	return n, term
-}
-
-func updateDateTime(dt DateTime, n int, term string) DateTime {
-	switch term {
-	case "yesterday":
-		dt.Day -= 1
-	case "tomorrow":
-		dt.Day += 1
-	case "week", "weeks":
-		dt.Day += n * 7
-	case "fortnight", "fortnights":
-		dt.Day += n * 14
-	case "year", "years":
-		dt.Year += n * 1
-	case "month", "months":
-		dt.Month += n * 1
-	case "day", "days":
-		dt.Day += n * 1
-	case "hour", "hours":
-		dt.Hour += time.Duration(n * 1)
-	case "minute", "minutes":
-		dt.Min += time.Duration(n * 1)
-	case "second", "seconds":
-		dt.Second += time.Duration(n * 1)
-	default:
-		// TODO
-	}
-	return dt
 }
 
 func getInitDateArray(ary []string) []int {
