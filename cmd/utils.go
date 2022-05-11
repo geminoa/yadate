@@ -2,25 +2,55 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
 
-func WeekToChineseChar(key time.Weekday) string {
+// Return a weekday in chinese char. If append is not "", add this value it.
+// For example, WeekToChineseChar(time., "曜日") #=> "月曜日".
+func WeekToChineseChar(key time.Weekday, append string) string {
 	var wtc = []string{
 		"日", "月", "火", "水", "木", "金", "土",
+	}
+
+	if append != "" {
+		for i, v := range wtc {
+			wtc[i] = v + append
+		}
 	}
 	return wtc[key]
 }
 
+// Return the number of digits for a given number.
+func NofDigits(n int) int {
+	return len(strconv.Itoa(n))
+}
+
+// Padding n with 0 if n is less given digit. For example, PaddingZero(1234, 9)
+// returns 123400000. This func is mainly used for calculating nano sec NN
+// in HH:MM:SS.NN but useful for more usecases.
+func PaddingZero(n int, digit int) int {
+	nofDig := NofDigits(n)
+	if nofDig < digit {
+		return n * int(math.Pow(10, float64(digit-nofDig)))
+	} else {
+		return n
+	}
+}
+
+// Print the result as similar to date command
+// such as "火  5 10 00:00:00 JST 2022".
 func PrintDatenize(d time.Time) {
 	tzName, _ := d.Zone()
 	fmt.Printf("%s %2d %2d %02d:%02d:%02d %s %d\n",
-		WeekToChineseChar(d.Weekday()), d.Month(), d.Day(),
+		WeekToChineseChar(d.Weekday(), ""), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), tzName, d.Year())
 }
 
+// Return true if given string s is found in array.
 func Included(s string, ary []string) bool {
 	for i := range ary {
 		if s == ary[i] {
@@ -30,6 +60,8 @@ func Included(s string, ary []string) bool {
 	return false
 }
 
+// Return an array of terms split with single/multiple space(s) from given s.
+// "a   b   c" #=> ["a", "b", "c"]
 func SplitWithSpace(s string) []string {
 	// Remove all redundant spaces.
 	reSpaces := regexp.MustCompile(`\s+`)
@@ -39,6 +71,7 @@ func SplitWithSpace(s string) []string {
 	return terms
 }
 
+// Return time.Layout of given formatted string of datetime.
 func FindLayout(s string) string {
 	var (
 		res string

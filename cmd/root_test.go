@@ -23,7 +23,43 @@ func TestModDate(t *testing.T) {
 }
 
 func TestUpdateTimeWithDOpt(t *testing.T) {
-	// TODO
+	loc := time.Now().Location()
+	tm := time.Date(2022, 0, 0, 0, 0, 0, 0, loc)
+
+	dtSet := map[string]time.Time{
+		"": tm,
+		"2022/05/10 11:22:33.1234": time.Date(
+			2022, time.Month(5), 10, 11, 22, 33, PaddingZero(1234, 9), loc),
+		"2022/05/10 11:22:33": time.Date(
+			2022, time.Month(5), 10, 11, 22, 33, 0, loc),
+		"2022/05/10 11:22": time.Date(
+			2022, time.Month(5), 10, 11, 22, 0, 0, loc),
+		"2022/05/10 11": time.Date(
+			2022, time.Month(5), 10, 11, 0, 0, 0, loc),
+
+		"05/10 11:22:33.1234": time.Date(
+			tm.Year(), time.Month(5), 10, 11, 22, 33, PaddingZero(1234, 9), loc),
+		"05/10 11:22:33": time.Date(
+			tm.Year(), time.Month(5), 10, 11, 22, 33, 0, loc),
+		"05/10 11:22": time.Date(
+			tm.Year(), time.Month(5), 10, 11, 22, 0, 0, loc),
+		"05/10 11": time.Date(
+			tm.Year(), time.Month(5), 10, 11, 0, 0, 0, loc),
+
+		"2022/05/10": time.Date(
+			2022, time.Month(5), 10, 0, 0, 0, 0, loc),
+		"05/10": time.Date(
+			tm.Year(), time.Month(5), 10, 0, 0, 0, 0, loc),
+	}
+
+	for k, v := range dtSet {
+		updated, _ := updateTimeWithoutModifier(tm, k)
+
+		if v != updated {
+			t.Errorf("'%s' != '%s' for '%s'.",
+				v, updated, k)
+		}
+	}
 }
 
 func TestInitDateTime(t *testing.T) {

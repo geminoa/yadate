@@ -43,14 +43,15 @@ func (dt *DateTime) update(n int, term string) {
 	}
 }
 
-type InitDateTime struct {
+// Attributes of Date obj of golang used to be used to generate the obj.
+type DateAttr struct {
 	y, m, d, h, min, sec, nsec int
 }
 
-func (idt InitDateTime) equals(another InitDateTime) bool {
-	if (idt.y == another.y) && (idt.m == another.m) && (idt.d == another.d) &&
-		(idt.h == another.h) && (idt.min == another.min) &&
-		(idt.sec == another.sec) && (idt.nsec == another.nsec) {
+func (da DateAttr) equals(another DateAttr) bool {
+	if (da.y == another.y) && (da.m == another.m) && (da.d == another.d) &&
+		(da.h == another.h) && (da.min == another.min) &&
+		(da.sec == another.sec) && (da.nsec == another.nsec) {
 		return true
 	} else {
 		return false
@@ -117,7 +118,7 @@ func modDate(t time.Time, dOpt string) (time.Time, error) {
 
 	dt := initDateTime(dOpt)
 
-	t, err := updateTimeWithDOpt(t, dOpt)
+	t, err := updateTimeWithoutModifier(t, dOpt)
 	if err != nil {
 		return t, err
 	}
@@ -128,14 +129,14 @@ func modDate(t time.Time, dOpt string) (time.Time, error) {
 	return t, nil
 }
 
-func updateTimeWithDOpt(t time.Time, dOpt string) (time.Time, error) {
+func updateTimeWithoutModifier(t time.Time, dOpt string) (time.Time, error) {
 	//rDigits := regexp.MustCompile(`^(\d{1,14})`)
 	rYMD := `^(\d+)[/-](\d{1,2})[/-](\d{1,2})` // 2022/05/10 (year/month/day)
 	rMD := `^(\d{1,2})[/-](\d{1,2})`           // 05/10 (month/day)
 
-	rHMSN := `(\d{1,2}):(\d{1,2}):(\d{1,2}).(\d)` // 11:22:33.1234 (hour:min:sec.nsec)
-	rHMS := `(\d{1,2}):(\d{1,2}):(\d{1,2})`       // 11:22:33 (hour:min:sec)
-	rHM := `(\d{1,2}):(\d{1,2})`                  // 11:22 (hour:min)
+	rHMSN := `(\d{1,2}):(\d{1,2}):(\d{1,2}).(\d+)` // 11:22:33.1234 (hour:min:sec.nsec)
+	rHMS := `(\d{1,2}):(\d{1,2}):(\d{1,2})`        // 11:22:33 (hour:min:sec)
+	rHM := `(\d{1,2}):(\d{1,2})`                   // 11:22 (hour:min)
 
 	rcYMDHMSN := regexp.MustCompile(rYMD + `\s+` + rHMSN) // 2022/05/10 11:22:33.1234
 	rcYMDHMS := regexp.MustCompile(rYMD + `\s+` + rHMS)   // 2022/05/10 11:22:33
@@ -153,16 +154,16 @@ func updateTimeWithDOpt(t time.Time, dOpt string) (time.Time, error) {
 	if layout := FindLayout(dOpt); layout != "" { // Time format in golang.
 		t, _ = time.Parse(layout, dOpt)
 	} else { // formats in `date` command.
-		idt := InitDateTime{0, 0, 0, 0, 0, 0, 0}
+		da := DateAttr{0, 0, 0, 0, 0, 0, 0}
 		if res := rcYMDHMSN.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{a[0], a[1], a[2], a[3], a[4], a[5], a[6]}
+			da = DateAttr{a[0], a[1], a[2], a[3], a[4], a[5], PaddingZero(a[6], 9)}
 		} else if res := rcYMDHMS.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{a[0], a[1], a[2], a[3], a[4], a[5], 0}
+			da = DateAttr{a[0], a[1], a[2], a[3], a[4], a[5], 0}
 		} else if res := rcYMDHM.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{a[0], a[1], a[2], a[3], a[4], 0, 0}
+			da = DateAttr{a[0], a[1], a[2], a[3], a[4], 0, 0}
 		} else if res := rcYMDH.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
 			if a[3]/10000 != 0 {
@@ -170,39 +171,39 @@ func updateTimeWithDOpt(t time.Time, dOpt string) (time.Time, error) {
 			} else if a[3]/100 != 0 {
 				hour := a[3] / 100
 				min := a[3] % 100
-				idt = InitDateTime{a[0], a[1], a[2], hour, min, 0, 0}
+				da = DateAttr{a[0], a[1], a[2], hour, min, 0, 0}
 			} else {
-				idt = InitDateTime{a[0], a[1], a[2], a[3], 0, 0, 0}
+				da = DateAttr{a[0], a[1], a[2], a[3], 0, 0, 0}
 			}
 
 		} else if res := rcMDHMSN.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{t.Year(), a[0], a[1], a[2], a[3], a[4], a[5]}
+			da = DateAttr{t.Year(), a[0], a[1], a[2], a[3], a[4], PaddingZero(a[5], 9)}
 		} else if res := rcMDHMS.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{t.Year(), a[0], a[1], a[2], a[3], a[4], 0}
+			da = DateAttr{t.Year(), a[0], a[1], a[2], a[3], a[4], 0}
 		} else if res := rcMDHM.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{t.Year(), a[0], a[1], a[2], a[3], 0, 0}
+			da = DateAttr{t.Year(), a[0], a[1], a[2], a[3], 0, 0}
 		} else if res := rcMDH.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
 			if a[2]/100 == 0 {
-				idt = InitDateTime{t.Year(), a[0], a[1], a[2], 0, 0, 0}
+				da = DateAttr{t.Year(), a[0], a[1], a[2], 0, 0, 0}
 			} else {
-				idt = InitDateTime{a[2], a[0], a[1], 0, 0, 0, 0}
+				da = DateAttr{a[2], a[0], a[1], 0, 0, 0, 0}
 			}
 
 		} else if res := rcYMD.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{a[0], a[1], a[2], 0, 0, 0, 0}
+			da = DateAttr{a[0], a[1], a[2], 0, 0, 0, 0}
 		} else if res := rcMD.FindAllStringSubmatch(dOpt, -1); len(res) > 0 {
 			a := getInitDateArray(res[0])
-			idt = InitDateTime{t.Year(), a[0], a[1], 0, 0, 0, 0}
+			da = DateAttr{t.Year(), a[0], a[1], 0, 0, 0, 0}
 		}
 
-		if !idt.equals(InitDateTime{0, 0, 0, 0, 0, 0, 0}) {
-			t = time.Date(idt.y, time.Month(idt.m), idt.d, idt.h, idt.min, idt.sec,
-				idt.nsec, t.Location())
+		if !da.equals(DateAttr{0, 0, 0, 0, 0, 0, 0}) {
+			t = time.Date(da.y, time.Month(da.m), da.d, da.h, da.min, da.sec,
+				da.nsec, t.Location())
 		}
 	}
 

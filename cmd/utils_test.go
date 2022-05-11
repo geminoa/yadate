@@ -12,10 +12,23 @@ func TestWeekToChineseChar(t *testing.T) {
 	}
 
 	for i, v := range wtc {
-		wd := WeekToChineseChar(time.Weekday(i))
+		wd := WeekToChineseChar(time.Weekday(i), "")
 		if wd != v {
 			t.Errorf("The result must be '%s', but '%s", v, wd)
 		}
+	}
+}
+
+func TestNofDigits(t *testing.T) {
+	if NofDigits(1000) != 4 {
+		t.Errorf("'%d' must be %d digits.", 1000, 4)
+	}
+}
+
+func TestPaddingZero(t *testing.T) {
+	res := PaddingZero(1234, 9)
+	if NofDigits(res) != 9 {
+		t.Errorf("'%d' must be %d digits.", res, 9)
 	}
 }
 
@@ -41,21 +54,15 @@ func TestSplitWithSpace(t *testing.T) {
 
 func TestFindLayout(t *testing.T) {
 	// TODO: test all formats just there are still three ...
-	formats := map[string]string{
-		"RFC822":   time.RFC822,
-		"Kitchen":  time.Kitchen,
-		"UnixDate": time.UnixDate,
+	formats := map[string][]string{
+		"RFC822":   []string{time.RFC822, "10 Nov 09 23:00 UTC"},
+		"Kitchen":  []string{time.Kitchen, "11:00PM"},
+		"UnixDate": []string{time.UnixDate, "Tue Nov 10 23:00:00 UTC 2009"},
 	}
 
-	examples := map[string]string{
-		"RFC822":   "10 Nov 09 23:00 UTC",
-		"Kitchen":  "11:00PM",
-		"UnixDate": "Tue Nov 10 23:00:00 UTC 2009",
-	}
-
-	for k, v := range examples {
-		layout := FindLayout(v)
-		if layout != formats[k] {
+	for k, v := range formats {
+		layout := FindLayout(v[1])
+		if layout != v[0] {
 			t.Errorf("'%s' must be '%s'.", v, k)
 		}
 	}
