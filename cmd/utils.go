@@ -7,21 +7,21 @@ import (
 	"time"
 )
 
-func weekToChineseChar(key time.Weekday) string {
+func WeekToChineseChar(key time.Weekday) string {
 	var wtc = []string{
 		"日", "月", "火", "水", "木", "金", "土",
 	}
 	return wtc[key]
 }
 
-func printDatenize(d time.Time) {
+func PrintDatenize(d time.Time) {
 	tzName, _ := d.Zone()
 	fmt.Printf("%s %2d %2d %02d:%02d:%02d %s %d\n",
-		weekToChineseChar(d.Weekday()), d.Month(), d.Day(),
+		WeekToChineseChar(d.Weekday()), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), tzName, d.Year())
 }
 
-func included(s string, ary []string) bool {
+func Included(s string, ary []string) bool {
 	for i := range ary {
 		if s == ary[i] {
 			return true
@@ -30,7 +30,7 @@ func included(s string, ary []string) bool {
 	return false
 }
 
-func splitWithSpace(s string) []string {
+func SplitWithSpace(s string) []string {
 	// Remove all redundant spaces.
 	reSpaces := regexp.MustCompile(`\s+`)
 	s = reSpaces.ReplaceAllString(s, " ")
@@ -39,7 +39,7 @@ func splitWithSpace(s string) []string {
 	return terms
 }
 
-func findLayout(s string) string {
+func FindLayout(s string) string {
 	var (
 		res string
 	)

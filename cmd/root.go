@@ -88,7 +88,7 @@ var (
 				}
 			}
 
-			printDatenize(resTime)
+			PrintDatenize(resTime)
 		},
 	}
 )
@@ -113,7 +113,22 @@ func initConfig() {
 	// https://github.com/spf13/cobra/blob/master/user_guide.md
 }
 
-func updateDate(t time.Time, dOpt string) (time.Time, error) {
+func modDate(t time.Time, dOpt string) (time.Time, error) {
+
+	t, err := updateTimeWithDOpt(t, dOpt)
+	if err != nil {
+		return t, err
+	}
+
+	dt := initDateTime(dOpt)
+
+	t = t.AddDate(dt.Year, dt.Month, dt.Day)
+	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
+
+	return t, nil
+}
+
+func updateTimeWithDOpt(t time.Time, dOpt string) (time.Time, error) {
 	//rDigits := regexp.MustCompile(`^(\d{1,14})`)
 	rYMD := `^(\d+)[/-](\d{1,2})[/-](\d{1,2})` // 2022/05/10 (year/month/day)
 	rMD := `^(\d{1,2})[/-](\d{1,2})`           // 05/10 (month/day)
@@ -135,7 +150,7 @@ func updateDate(t time.Time, dOpt string) (time.Time, error) {
 	rcYMD := regexp.MustCompile(rYMD) // 2022/05/10
 	rcMD := regexp.MustCompile(rMD)   // 05/10
 
-	if layout := findLayout(dOpt); layout != "" { // Time format in golang.
+	if layout := FindLayout(dOpt); layout != "" { // Time format in golang.
 		t, _ = time.Parse(layout, dOpt)
 	} else { // formats in `date` command.
 		idt := InitDateTime{0, 0, 0, 0, 0, 0, 0}
@@ -194,8 +209,8 @@ func updateDate(t time.Time, dOpt string) (time.Time, error) {
 	return t, nil
 }
 
-func updateDateTime(dOpt string) DateTime {
-	dOptTerms := splitWithSpace(dOpt)
+func initDateTime(dOpt string) DateTime {
+	dOptTerms := SplitWithSpace(dOpt)
 	agoPos := []int{} // Positions of "ago" in dOptTerms
 	for i, t := range dOptTerms {
 		if t == "ago" {
@@ -207,13 +222,13 @@ func updateDateTime(dOpt string) DateTime {
 		if v-1 < 0 {
 			// TODO: raise a panic because it cannot be happend.
 		} else if v-2 < 0 { // case of first value with no number such as "-d year ago"
-			n, t := parseSingleDateOpt(dOptTerms[v-1])
+			n, t := parseSingleDateStringOpt(dOptTerms[v-1])
 			dOptTerms[v-1] = fmt.Sprintf("%d%s", -n, t)
 		} else {
 			if n, err := strconv.Atoi(dOptTerms[v-2]); err == nil {
 				dOptTerms[v-2] = fmt.Sprintf("%d", -n)
 			} else {
-				n, t := parseSingleDateOpt(dOptTerms[v-1])
+				n, t := parseSingleDateStringOpt(dOptTerms[v-1])
 				dOptTerms[v-1] = fmt.Sprintf("%d%s", -n, t)
 			}
 		}
@@ -244,36 +259,30 @@ func updateDateTime(dOpt string) DateTime {
 
 	dt := DateTime{0, 0, 0, 0, 0, 0}
 	for _, v := range dTerms {
-		n, term := parseSingleDateOpt(v)
+		n, term := parseSingleDateStringOpt(v)
 		dt.update(n, term)
 	}
 	return dt
 }
 
-func modDate(t time.Time, dOpt string) (time.Time, error) {
-
-	t, err := updateDate(t, dOpt)
-	if err != nil {
-		return t, err
-	}
-
-	dt := updateDateTime(dOpt)
-
-	t = t.AddDate(dt.Year, dt.Month, dt.Day)
-	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
-
-	return t, nil
-}
-
-func parseSingleDateOpt(dOpt string) (n int, term string) {
+// Parse an arg of -d option for modifying datetime such as "1day" or
+// "2 month". It returns a combination of num and term, 1 and "day" for "1day"
+// or 2 and "month" for "2 month". This function expects to get an arg as a
+// separated parameter of raw arg. For example, if the raw arg is "-d year
+// 2 months 3 days", then "year", "2 month" and "3 days" can be given to the
+// function step by step.
+func parseSingleDateStringOpt(dOpt string) (n int, term string) {
 	n = 1
 	term = ""
+
+	reSpaces := regexp.MustCompile(`\s+`)
+	dOpt = reSpaces.ReplaceAllString(dOpt, "")
 
 	r := regexp.MustCompile(`^(-?)(\d*)(\w*)`)
 
 	if r.MatchString(dOpt) {
-		a := r.FindAllSubmatch([]byte(dOpt), -1)
-		n, _ = strconv.Atoi(string(a[0][2]))
+		a := r.FindAllStringSubmatch(dOpt, -1)
+		n, _ = strconv.Atoi(a[0][2])
 		if n == 0 { // n is 0 if no num in dOpt, but should be 1 in this case.
 			n = 1
 		}
