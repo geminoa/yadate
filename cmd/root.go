@@ -115,12 +115,12 @@ func initConfig() {
 
 func modDate(t time.Time, dOpt string) (time.Time, error) {
 
+	dt := initDateTime(dOpt)
+
 	t, err := updateTimeWithDOpt(t, dOpt)
 	if err != nil {
 		return t, err
 	}
-
-	dt := initDateTime(dOpt)
 
 	t = t.AddDate(dt.Year, dt.Month, dt.Day)
 	t = t.Add(time.Hour*dt.Hour + time.Minute*dt.Min + time.Second*dt.Second)
@@ -240,8 +240,8 @@ func initDateTime(dOpt string) DateTime {
 		dOptTerms = append(dOptTerms[:v], dOptTerms[v+1:]...)
 	}
 
-	rNum := regexp.MustCompile(`^-?(\d+)`)
-	rStr := regexp.MustCompile(`^(\w+)`)
+	rNum := regexp.MustCompile(`^-?(\d+)$`)
+	rStr := regexp.MustCompile(`^([a-zA-Z]+)$`)
 	for i := 0; i < len(dOptTerms)-1; i++ {
 		// TODO: combine num and term if there are separated
 		if rNum.MatchString(dOptTerms[i]) && rStr.MatchString(dOptTerms[i+1]) {
