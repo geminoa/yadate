@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"regexp"
 	"sort"
@@ -69,14 +70,22 @@ var (
 
 			resTime = time.Now()
 
-			if dateOpt, err := cmd.Flags().GetString("date"); err == nil {
-				if dateOpt != "" {
-					resTime, err = modDate(resTime, dateOpt)
+			if dOpt, err := cmd.Flags().GetString("date"); dOpt != "" && err == nil {
+				if dOpt != "" {
+					resTime, err = modDate(resTime, dOpt)
 					if err != nil {
 						fmt.Println(err)
 						os.Exit(1)
 					}
 				}
+			} else if ref, err := cmd.Flags().GetString("reference"); ref != "" && err == nil {
+				fileinfo, err := fs.Stat(os.DirFS("."), ref)
+				if err != nil {
+					fmt.Println("Error: '" + ref + "' not found!")
+					os.Exit(1)
+				}
+				//fmt.Println(fileinfo.ModTime())
+				resTime = fileinfo.ModTime()
 			}
 
 			if utcOpt, err := cmd.Flags().GetBool("utc"); err == nil {
@@ -107,6 +116,9 @@ func init() {
 	rootCmd.Flags().StringP(
 		"date", "d", "",
 		"display time described by STRING, not 'now'")
+	rootCmd.Flags().StringP(
+		"reference", "r", "",
+		"display the last modification time of FILE")
 }
 
 func initConfig() {
