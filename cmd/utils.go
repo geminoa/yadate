@@ -43,11 +43,17 @@ func PaddingZero(n int, digit int) int {
 
 // Print the result as similar to date command
 // such as "火  5 10 00:00:00 JST 2022".
-func PrintDatenize(d time.Time) {
+func PrintDatenize(d time.Time, platform string) {
 	tzName, _ := d.Zone()
-	fmt.Printf("%s %2d %2d %02d:%02d:%02d %s %d\n",
-		WeekToChineseChar(d.Weekday(), ""), d.Month(), d.Day(),
-		d.Hour(), d.Minute(), d.Second(), tzName, d.Year())
+	if platform == "macOS" {
+		fmt.Printf("%s %2d %2d %02d:%02d:%02d %s %d\n",
+			WeekToChineseChar(d.Weekday(), ""), d.Month(), d.Day(),
+			d.Hour(), d.Minute(), d.Second(), tzName, d.Year())
+	} else { // GNU
+		fmt.Printf("%d年%3d月%3d日 %s %02d:%02d:%02d %s\n",
+			d.Year(), d.Month(), d.Day(), WeekToChineseChar(d.Weekday(), "曜日"),
+			d.Hour(), d.Minute(), d.Second(), tzName)
+	}
 }
 
 // Return true if given string s is found in array.

@@ -98,7 +98,7 @@ var (
 				}
 			}
 
-			PrintDatenize(resTime)
+			PrintDatenize(resTime, "GNU")
 		},
 	}
 )
