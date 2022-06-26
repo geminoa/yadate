@@ -67,3 +67,13 @@ func TestFindLayout(t *testing.T) {
 		}
 	}
 }
+
+func TestGetOffsetInString(t *testing.T) {
+	// TODO: Test other timezones than UTC.
+	d := time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC)
+	offset := GetOffsetInString(d)
+	actual := "+0000"
+	if offset != actual {
+		t.Errorf("'%s' must be '%s'.", offset, actual)
+	}
+}

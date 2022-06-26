@@ -98,7 +98,13 @@ var (
 				}
 			}
 
-			PrintDatenize(resTime, "GNU")
+			rfc5322, _ := cmd.Flags().GetBool("rfc-email")
+
+			if rfc5322 {
+				PrintRFC5322Format(resTime)
+			} else {
+				PrintDatenize(resTime, "GNU")
+			}
 		},
 	}
 )
@@ -119,6 +125,9 @@ func init() {
 	rootCmd.Flags().StringP(
 		"reference", "r", "",
 		"display the last modification time of FILE")
+	rootCmd.Flags().BoolP(
+		"rfc-email", "R", false,
+		"output date and time in RFC 5322 format.  Example: Mon, 14 Aug 2006 02:34:56 -0600")
 }
 
 func initConfig() {

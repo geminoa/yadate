@@ -24,6 +24,13 @@ func WeekToChineseChar(key time.Weekday, append string) string {
 	return wtc[key]
 }
 
+func WeekdayAbbreviated(key time.Weekday) string {
+	var wtc = []string{
+		"Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat",
+	}
+	return wtc[key]
+}
+
 // Return the number of digits for a given number.
 func NofDigits(n int) int {
 	return len(strconv.Itoa(n))
@@ -54,6 +61,30 @@ func PrintDatenize(d time.Time, platform string) {
 			d.Year(), d.Month(), d.Day(), WeekToChineseChar(d.Weekday(), "曜日"),
 			d.Hour(), d.Minute(), d.Second(), tzName)
 	}
+}
+
+// Print date in RFC5322 format, for example, "Sun, 26 Jun 2022 20:18:50 +0900".
+func PrintRFC5322Format(d time.Time) {
+	fmt.Printf("%s, %02d %s %4d %02d:%02d:%02d %s\n",
+		WeekdayAbbreviated(d.Weekday()), d.Day(), d.Month(), d.Year(),
+		d.Hour(), d.Minute(), d.Second(), GetOffsetInString(d))
+}
+
+// Return "+0900" for JST.
+func GetOffsetInString(d time.Time) string {
+	_, offset := d.Zone()
+
+	pref := ""
+	if offset < 0 {
+		pref = "-"
+		offset = -offset
+	} else {
+		pref = "+"
+	}
+	h := offset / 3600
+	s := fmt.Sprintf("%s%02d00", pref, h)
+
+	return s
 }
 
 // Return true if given string s is found in array.
